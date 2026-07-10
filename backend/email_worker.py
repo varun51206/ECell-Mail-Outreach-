@@ -1,4 +1,6 @@
 import time
+import imaplib
+import re
 import os
 import sqlite3
 import threading
@@ -9,6 +11,25 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from backend.database import get_db, DB_PATH
+
+def inject_tracking(body_html: str, public_url: str, schedule_id: int) -> str:
+    public_url_clean = public_url.rstrip("/")
+    
+    def repl_link(match):
+        url = match.group(1)
+        if "/api/track/" in url or not (url.startswith("http://") or url.startswith("https://")):
+            return match.group(0)
+        return f'href="{public_url_clean}/api/track/click/{schedule_id}?dest={url}"'
+        
+    body_tracked = re.sub(r'href="([^"]+)"', repl_link, body_html)
+    
+    pixel_html = f'<img src="{public_url_clean}/api/track/open/{schedule_id}" width="1" height="1" style="display:none;" />'
+    if "</body>" in body_tracked:
+        body_tracked = body_tracked.replace("</body>", f"{pixel_html}</body>")
+    else:
+        body_tracked += pixel_html
+        
+    return body_tracked
 
 STOP_STATUSES = ["Replied", "Call Booked", "Closed"]
 
@@ -57,7 +78,9 @@ def send_email_smtp(gmail_user, gmail_app_password, to_email, subject, body, fro
         msg["Cc"] = cc_email
         
         msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain", "utf-8"))
+        is_html = body.strip().startswith("<") or "</div>" in body or "</p>" in body or "<br" in body
+        mime_type = "html" if is_html else "plain"
+        msg.attach(MIMEText(body, mime_type, "utf-8"))
 
         if attachment_path and os.path.exists(attachment_path):
             with open(attachment_path, "rb") as f:
@@ -218,6 +241,12 @@ def process_due_emails(user_id: int):
             subject = render_template(subject_template, data_bindings)
             body = render_template(body_template, data_bindings)
 
+            is_html_format = body.strip().startswith("<") or "</div>" in body or "</p>" in body or "<br" in body
+            if is_html_format:
+                row_settings = conn.execute("SELECT public_url FROM settings WHERE user_id = ?", (user_id,)).fetchone()
+                public_url_val = row_settings["public_url"] if row_settings and row_settings["public_url"] else "http://127.0.0.1:8000"
+                body = inject_tracking(body, public_url_val, row_id)
+
             # Attachments are only sent on 'initial' stage
             attach_path, attach_name = "", ""
             if stage_step == "initial":
@@ -271,3 +300,57 @@ def start_sending_thread(user_id: int):
     t = threading.Thread(target=process_due_emails, args=(user_id,), daemon=True)
     t.start()
     return True
+
+def sync_user_replies(user_id: int) -> dict:
+    conn = get_db()
+    try:
+        settings = conn.execute("""
+            SELECT gmail_user, gmail_app_password FROM settings WHERE user_id = ?
+        """, (user_id,)).fetchone()
+        
+        if not settings or not settings["gmail_user"] or not settings["gmail_app_password"]:
+            return {"status": "error", "message": "SMTP/Gmail credentials not configured in settings."}
+            
+        gmail_user = settings["gmail_user"].strip()
+        gmail_pass = settings["gmail_app_password"].strip()
+        
+        rows = conn.execute("""
+            SELECT DISTINCT email FROM schedule 
+            WHERE user_id = ? AND status = 'Sent'
+        """, (user_id,)).fetchall()
+        
+        sent_emails = [r["email"].strip().lower() for r in rows]
+        if not sent_emails:
+            return {"status": "success", "message": "No active 'Sent' leads in the queue to check replies for."}
+            
+        try:
+            imap = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=15)
+            imap.login(gmail_user, gmail_pass)
+        except Exception as e:
+            return {"status": "error", "message": f"IMAP authentication failed: {str(e)}"}
+            
+        imap.select("INBOX")
+        
+        replied_count = 0
+        for target_email in sent_emails:
+            status, messages = imap.search(None, f'FROM "{target_email}"')
+            if status == "OK" and messages[0]:
+                conn.execute("""
+                    UPDATE schedule 
+                    SET status = 'Replied', notes = 'Auto-detected reply via Gmail Inbox Tracker'
+                    WHERE user_id = ? AND email = ?
+                """, (user_id, target_email))
+                replied_count += 1
+                
+        conn.commit()
+        imap.logout()
+        
+        if replied_count > 0:
+            return {"status": "success", "message": f"Synced! Auto-detected replies from {replied_count} leads and halted followups."}
+        else:
+            return {"status": "success", "message": "Synced! Checked inbox, but no new replies were found."}
+            
+    except Exception as e:
+        return {"status": "error", "message": f"Inbox sync encountered an error: {str(e)}"}
+    finally:
+        conn.close()

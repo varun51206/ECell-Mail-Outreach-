@@ -6,6 +6,7 @@ let currentCampaign = "live_project";
 let templatesData = {};
 let currentSettings = {};
 let gridRows = [];
+let quill = null;
 
 const API_BASE = "/api";
 
@@ -587,7 +588,6 @@ async function loadTemplatesTab() {
     const campaignId = document.getElementById("template-campaign-select").value;
     const stepSelect = document.getElementById("template-step-select");
     
-    // Clear and build step selectors dynamically
     stepSelect.innerHTML = "";
     if (campaignId === "live_project") {
         addOption(stepSelect, "initial_founder", "Initial Step (Founder)");
@@ -606,6 +606,23 @@ async function loadTemplatesTab() {
         addOption(stepSelect, "f2", "Follow-up 2 (f2)");
         addOption(stepSelect, "f3", "Follow-up 3 (f3)");
         addOption(stepSelect, "f4", "Follow-up 4 (f4)");
+    }
+
+    if (!quill) {
+        quill = new Quill('#template-body-container', {
+            theme: 'snow',
+            placeholder: 'Write your email body here...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link', 'clean']
+                ]
+            }
+        });
+        quill.on('text-change', () => {
+            updateTemplatePreview();
+        });
     }
 
     await fetchAllTemplates();
@@ -637,29 +654,26 @@ function loadTemplateView() {
     const stepKey = document.getElementById("template-step-select").value;
     
     const subjectInput = document.getElementById("template-subject");
-    const bodyInput = document.getElementById("template-body");
     const offsetInput = document.getElementById("template-offset");
 
-    // Load defaults if exist
     const cData = templatesData[campaignId] || {};
     const sData = cData[stepKey] || { subject: "", body: "", day_offset: 0 };
 
     subjectInput.value = sData.subject;
-    bodyInput.value = sData.body;
     offsetInput.value = sData.day_offset;
 
-    // Set listener for live preview
+    if (quill) {
+        quill.root.innerHTML = sData.body || "";
+    }
+
     subjectInput.oninput = updateTemplatePreview;
-    bodyInput.oninput = updateTemplatePreview;
-    
     updateTemplatePreview();
 }
 
 function updateTemplatePreview() {
     const subjVal = document.getElementById("template-subject").value;
-    const bodyVal = document.getElementById("template-body").value;
+    const bodyVal = quill ? quill.root.innerHTML : "";
     
-    // Sample bindings
     const sample = {
         FirstName: "Rohan",
         Company: "Acme Corp",
@@ -680,14 +694,14 @@ function updateTemplatePreview() {
     }
 
     document.getElementById("preview-subject-text").textContent = subject;
-    document.getElementById("preview-body-text").textContent = body;
+    document.getElementById("preview-body-text").innerHTML = body;
 }
 
 async function saveTemplate() {
     const campaignId = document.getElementById("template-campaign-select").value;
     const stepKey = document.getElementById("template-step-select").value;
     const subject = document.getElementById("template-subject").value;
-    const body = document.getElementById("template-body").value;
+    const body = quill ? quill.root.innerHTML : "";
     const offset = parseInt(document.getElementById("template-offset").value) || 0;
 
     const payload = {
@@ -734,6 +748,7 @@ async function loadSettings() {
         document.getElementById("settings-sender-phone").value = currentSettings.sender_phone;
         document.getElementById("settings-gmail-user").value = currentSettings.gmail_user;
         document.getElementById("settings-gmail-password").value = currentSettings.gmail_app_password;
+        document.getElementById("settings-public-url").value = currentSettings.public_url || "http://127.0.0.1:8000";
 
         // Render stop banner / button state
         const stopBanner = document.getElementById("stop-banner");
@@ -758,7 +773,8 @@ async function saveSettings(event) {
         sender_name: document.getElementById("settings-sender-name").value,
         sender_phone: document.getElementById("settings-sender-phone").value,
         gmail_user: document.getElementById("settings-gmail-user").value,
-        gmail_app_password: document.getElementById("settings-gmail-password").value
+        gmail_app_password: document.getElementById("settings-gmail-password").value,
+        public_url: document.getElementById("settings-public-url").value
     };
 
     try {
@@ -1108,5 +1124,32 @@ async function sendTestEmail() {
     } finally {
         btn.disabled = false;
         btn.textContent = "✉️ Send Test Email to Self";
+    }
+}
+
+async function syncGmailReplies() {
+    const btn = document.getElementById("sync-replies-btn");
+    if (!btn) return;
+    
+    btn.disabled = true;
+    btn.textContent = "⌛ Syncing Inbox...";
+
+    try {
+        const res = await fetch(`${API_BASE}/schedule/sync-replies`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${apiToken}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+            refreshScheduleQueue();
+        } else {
+            alert(`Sync failed: ${data.detail}`);
+        }
+    } catch (e) {
+        alert("Failed to communicate with the reply sync server.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "📥 Sync Replies via Gmail";
     }
 }

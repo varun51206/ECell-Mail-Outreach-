@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 </head>
 <body>
     <!-- Background glows -->
@@ -221,8 +223,9 @@
                 <div class="card mt-4">
                     <div class="card-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                         <h3 style="margin-bottom: 0;">Active Schedule & Monitoring Queue</h3>
-                        <div class="card-header-actions" style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="queue-search-input" oninput="filterQueueTable()" placeholder="🔍 Search emails/names..." style="width: 200px; padding: 6px 12px; font-size: 0.8rem; height: 32px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px; color: white;">
+                        <div class="card-header-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="queue-search-input" oninput="filterQueueTable()" placeholder="🔍 Search emails/names..." style="width: 180px; padding: 6px 12px; font-size: 0.8rem; height: 32px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px; color: white;">
+                            <button class="btn btn-secondary btn-sm" id="sync-replies-btn" onclick="syncGmailReplies()">📥 Sync Replies via Gmail</button>
                             <button class="btn btn-secondary btn-sm" onclick="refreshScheduleQueue()">🔄 Refresh Queue</button>
                             <button id="queue-send-btn" class="btn btn-primary btn-sm" onclick="triggerManualSend()">🚀 Start Sending Due Mails</button>
                         </div>
@@ -297,8 +300,8 @@
                             <input type="text" id="template-subject" placeholder="e.g. Re: quick idea for {{Company}}">
                         </div>
                         <div class="form-group">
-                            <label for="template-body">Email Body (Plain Text)</label>
-                            <textarea id="template-body" rows="15" placeholder="Write email body text here..."></textarea>
+                            <label for="template-body">Email Body (Rich Text Editor)</label>
+                            <div id="template-body-container" style="height: 350px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px; color: white;"></div>
                         </div>
                         <div class="form-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button class="btn btn-primary" onclick="saveTemplate()">💾 Save Template Stage</button>
@@ -344,6 +347,11 @@
                                 <label for="settings-gmail-password">Gmail App Password</label>
                                 <input type="password" id="settings-gmail-password" required placeholder="16-character google app password">
                                 <p class="help-text">Must be a Google App Password (not your primary account password). Generate this in your Google Account security settings.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-public-url">Public Server URL (For Open/Click Track Analytics)</label>
+                                <input type="text" id="settings-public-url" required value="http://127.0.0.1:8000" placeholder="e.g. http://127.0.0.1:8000 or your custom domain">
+                                <p class="help-text">Defaults to local URL. If you host this application publicly, update this to your domain so tracking pixel links can be fetched by recipients.</p>
                             </div>
                             <button type="submit" class="btn btn-primary">Save Settings</button>
                         </form>

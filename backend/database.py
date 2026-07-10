@@ -342,6 +342,21 @@ def init_db():
 
     conn.commit()
 
+    # Column migrations for open and click tracking
+    try:
+        cursor.execute("ALTER TABLE schedule ADD COLUMN open_count INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE schedule ADD COLUMN click_count INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE settings ADD COLUMN public_url TEXT DEFAULT 'http://127.0.0.1:8000'")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
     # Seed default templates for all registered users if they are missing
     users = cursor.execute("SELECT id FROM users").fetchall()
     for u in users:

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
 
 from backend.database import get_db, init_db, create_user, create_session, get_user_from_session, destroy_session
-from backend.email_worker import get_user_sending_state, start_sending_thread, send_email_smtp, get_campaign_attachment
+from backend.email_worker import get_user_sending_state, start_sending_thread, send_email_smtp, get_campaign_attachment, sync_user_replies
 
 app = FastAPI(title="E-Cell Outreach OS API")
 
@@ -40,6 +40,7 @@ class SmtpSettings(BaseModel):
     sender_phone: str
     gmail_user: str
     gmail_app_password: str
+    public_url: Optional[str] = "http://127.0.0.1:8000"
 
 class TestSmtpRequest(BaseModel):
     recipient_email: str
@@ -145,21 +146,21 @@ def me(user = Depends(get_current_user)):
 def fetch_settings(user = Depends(get_current_user)):
     conn = get_db()
     row = conn.execute("""
-        SELECT sender_name, sender_phone, gmail_user, gmail_app_password, emergency_stop 
+        SELECT sender_name, sender_phone, gmail_user, gmail_app_password, emergency_stop, public_url 
         FROM settings WHERE user_id = ?
     """, (user["id"],)).fetchone()
     conn.close()
     
     if not row:
-        return {"sender_name": "", "sender_phone": "", "gmail_user": "", "gmail_app_password": "", "emergency_stop": 0}
+        return {"sender_name": "", "sender_phone": "", "gmail_user": "", "gmail_app_password": "", "emergency_stop": 0, "public_url": "http://127.0.0.1:8000"}
     
     return {
         "sender_name": row["sender_name"] or "",
         "sender_phone": row["sender_phone"] or "",
         "gmail_user": row["gmail_user"] or "",
-        # Mask password for security when fetching
         "gmail_app_password": row["gmail_app_password"] or "",
-        "emergency_stop": bool(row["emergency_stop"])
+        "emergency_stop": bool(row["emergency_stop"]),
+        "public_url": row["public_url"] or "http://127.0.0.1:8000"
     }
 
 @app.post("/api/settings")
@@ -167,10 +168,11 @@ def save_settings(settings_data: SmtpSettings, user = Depends(get_current_user))
     conn = get_db()
     conn.execute("""
         UPDATE settings 
-        SET sender_name = ?, sender_phone = ?, gmail_user = ?, gmail_app_password = ?
+        SET sender_name = ?, sender_phone = ?, gmail_user = ?, gmail_app_password = ?, public_url = ?
         WHERE user_id = ?
     """, (settings_data.sender_name, settings_data.sender_phone, 
-          settings_data.gmail_user.strip(), settings_data.gmail_app_password.strip(), user["id"]))
+          settings_data.gmail_user.strip(), settings_data.gmail_app_password.strip(), 
+          settings_data.public_url.strip(), user["id"]))
     conn.commit()
     conn.close()
     return {"message": "Settings updated successfully"}
@@ -442,6 +444,42 @@ def clear_schedule(campaign_id: str, user = Depends(get_current_user)):
     conn.commit()
     conn.close()
     return {"message": f"Outreach queue for campaign '{campaign_id}' has been cleared"}
+
+@app.post("/api/schedule/sync-replies")
+def sync_replies(user = Depends(get_current_user)):
+    res = sync_user_replies(user["id"])
+    if res["status"] == "error":
+        raise HTTPException(status_code=400, detail=res["message"])
+    return {"message": res["message"]}
+
+from fastapi import Response
+from fastapi.responses import RedirectResponse
+
+TRANSPARENT_GIF_BYTES = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+
+@app.get("/api/track/open/{schedule_id}")
+def track_open(schedule_id: int):
+    conn = get_db()
+    conn.execute("""
+        UPDATE schedule 
+        SET open_count = open_count + 1, notes = 'Opened email'
+        WHERE id = ?
+    """, (schedule_id,))
+    conn.commit()
+    conn.close()
+    return Response(content=TRANSPARENT_GIF_BYTES, media_type="image/gif")
+
+@app.get("/api/track/click/{schedule_id}")
+def track_click(schedule_id: int, dest: str):
+    conn = get_db()
+    conn.execute("""
+        UPDATE schedule 
+        SET click_count = click_count + 1, notes = 'Clicked link: ' || ?
+        WHERE id = ?
+    """, (dest, schedule_id))
+    conn.commit()
+    conn.close()
+    return RedirectResponse(url=dest)
 
 @app.get("/api/schedule/stats")
 def get_stats(user = Depends(get_current_user)):
