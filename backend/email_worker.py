@@ -52,6 +52,10 @@ def send_email_smtp(gmail_user, gmail_app_password, to_email, subject, body, fro
         msg = MIMEMultipart()
         msg["From"] = f"{from_name} <{gmail_user}>"
         msg["To"] = to_email.strip()
+        
+        cc_email = "ecellramjasoutreach@gmail.com"
+        msg["Cc"] = cc_email
+        
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain", "utf-8"))
 
@@ -69,7 +73,9 @@ def send_email_smtp(gmail_user, gmail_app_password, to_email, subject, body, fro
             server.starttls()
             server.ehlo()
             server.login(gmail_user.strip(), gmail_app_password.strip())
-            server.sendmail(gmail_user.strip(), [to_email.strip()], msg.as_string())
+            
+            recipients = [to_email.strip(), cc_email]
+            server.sendmail(gmail_user.strip(), recipients, msg.as_string())
         return True, "Sent successfully"
     except Exception as e:
         return False, f"{type(e).__name__}: {str(e)}"
