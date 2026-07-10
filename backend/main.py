@@ -477,6 +477,58 @@ def get_sending_status(user = Depends(get_current_user)):
     return get_user_sending_state(user["id"])
 
 
+class TestEmailRequest(BaseModel):
+    campaign_id: str
+    step_key: str
+    subject: str
+    body: str
+
+@app.post("/api/templates/send-test")
+def send_test_email(payload: TestEmailRequest, user = Depends(get_current_user)):
+    conn = get_db()
+    settings = conn.execute("SELECT sender_name, sender_phone, gmail_user, gmail_app_password FROM settings WHERE user_id = ?", (user["id"],)).fetchone()
+    conn.close()
+    
+    if not settings or not settings["gmail_user"] or not settings["gmail_app_password"]:
+        raise HTTPException(status_code=400, detail="SMTP credentials are not configured in settings.")
+        
+    mock_context = {
+        "FirstName": "Abhishek",
+        "Company": "Startup Edge",
+        "Role": "Founder",
+        "SenderName": settings["sender_name"] or user["username"],
+        "SenderPhone": settings["sender_phone"] or "+91 99999 99999",
+        "Custom1": "ReviewDraft.pdf",
+        "Custom2": "Ramjas E-Cell"
+    }
+    
+    subject = payload.subject
+    body = payload.body
+    for k, v in mock_context.items():
+        subject = subject.replace(f"{{{{{k}}}}}", v)
+        body = body.replace(f"{{{{{k}}}}}", v)
+        
+    conn_attach = get_db()
+    attach_path, attach_name = get_campaign_attachment(conn_attach, user["id"], payload.campaign_id)
+    conn_attach.close()
+    
+    ok, err_msg = send_email_smtp(
+        gmail_user=settings["gmail_user"],
+        gmail_app_password=settings["gmail_app_password"],
+        to_email=settings["gmail_user"],
+        subject=f"[TEST] {subject}",
+        body=body,
+        from_name=settings["sender_name"] or "Outreach OS Tester",
+        attachment_path=attach_path,
+        attachment_name=attach_name
+    )
+    
+    if not ok:
+        raise HTTPException(status_code=500, detail=f"Failed to send test email: {err_msg}")
+        
+    return {"message": "Test email sent successfully to your own inbox!"}
+
+
 # Serve Frontend static files
 frontend_path = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
 if os.path.exists(frontend_path):

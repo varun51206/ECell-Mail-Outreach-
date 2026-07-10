@@ -300,8 +300,9 @@
                             <label for="template-body">Email Body (Plain Text)</label>
                             <textarea id="template-body" rows="15" placeholder="Write email body text here..."></textarea>
                         </div>
-                        <div class="form-row">
+                        <div class="form-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button class="btn btn-primary" onclick="saveTemplate()">💾 Save Template Stage</button>
+                            <button class="btn btn-secondary" id="send-test-btn" onclick="sendTestEmail()">✉️ Send Test Email to Self</button>
                         </div>
                     </div>
                 </div>

@@ -419,11 +419,37 @@ async function bulkSaveLeads() {
         return;
     }
 
-    // Filter valid rows (require at least Email)
     const validLeads = gridRows.filter(row => row.email && row.email.trim() !== "");
     if (validLeads.length === 0) {
         alert("Enter at least one lead with a valid email address.");
         return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let errors = [];
+    let warnings = [];
+    
+    validLeads.forEach((lead, idx) => {
+        const rowNum = idx + 1;
+        if (!emailRegex.test(lead.email.trim())) {
+            errors.push(`Row ${rowNum}: '${lead.email}' is not a valid email address.`);
+        }
+        if (!lead.first_name || lead.first_name.trim() === "") {
+            warnings.push(`Row ${rowNum}: First Name is missing.`);
+        }
+        if (!lead.company || lead.company.trim() === "") {
+            warnings.push(`Row ${rowNum}: Company/Target Entity is missing.`);
+        }
+    });
+
+    if (errors.length > 0) {
+        alert("Please fix the following validation errors before saving:\n\n" + errors.join("\n"));
+        return;
+    }
+
+    if (warnings.length > 0) {
+        const proceed = confirm("Warnings found in your leads list:\n\n" + warnings.join("\n") + "\n\nDo you still want to save and generate schedules?");
+        if (!proceed) return;
     }
 
     // Prepare payload
@@ -1044,5 +1070,43 @@ function filterQueueTable() {
         } else {
             tr.style.display = "none";
         }
+    }
+}
+
+async function sendTestEmail() {
+    const campaignId = document.getElementById("template-campaign-select").value;
+    const stepKey = document.getElementById("template-step-select").value;
+    const subject = document.getElementById("template-subject").value;
+    const body = document.getElementById("template-body").value;
+    const btn = document.getElementById("send-test-btn");
+
+    if (!subject.trim() || !body.trim()) {
+        alert("Please enter a subject and body for the template first.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "⌛ Sending Test...";
+
+    try {
+        const res = await fetch(`${API_BASE}/templates/send-test`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiToken}`
+            },
+            body: JSON.stringify({ campaign_id: campaignId, step_key: stepKey, subject, body })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+        } else {
+            alert(`Error sending test email: ${data.detail}`);
+        }
+    } catch (e) {
+        alert("Network error sending test email. Check server status.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "✉️ Send Test Email to Self";
     }
 }
