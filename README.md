@@ -6,7 +6,7 @@ Written in **FastAPI (Python)** and styled with a custom modern **Forest Midnigh
 
 ---
 
-## 📦 Features
+##  Features
 1. **Multi-User Isolation**: Register and log in. Settings, SMTP credentials, templates, and lead queues are fully separated and private to your device.
 2. **Three Campaign Streams**:
    - **Live Project Reachout**: Generic step sequences (Initial + 4 follow-ups) with automatic segment routing (Founder vs POC) and optional attachment support.
@@ -19,7 +19,7 @@ Written in **FastAPI (Python)** and styled with a custom modern **Forest Midnigh
 
 ---
 
-## 🚀 How to Run the App (For Team Members)
+##  How to Run the App (For Team Members)
 
 Follow these simple steps to download and run the application on your computer:
 
@@ -41,7 +41,7 @@ Follow these simple steps to download and run the application on your computer:
 
 ---
 
-## 🔒 Security & Best Practices
+##  Security & Best Practices
 * **Gmail App Passwords**: Do not use your standard Google password. Go to your Google Account Settings, turn on **2-Factor Authentication**, and generate a 16-character **App Password** for this application.
 * **Keep your Database Private**: The database file `ecell_outreach.db` is stored locally on your hard drive and contains your SMTP credentials. It is listed in `.gitignore`, meaning you will never accidentally push your password or leads to GitHub. Never share your local `.db` file with anyone else.
 * **Gmail Send Quotas**: Free Gmail accounts are limited to **500 emails/day**; Workspace accounts are limited to **2,000 emails/day**. Spread out large outreach campaigns over multiple days to maintain high sender authority.
