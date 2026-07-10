@@ -1,0 +1,23 @@
+# Database
+backend/ecell_outreach.db
+backend/ecell_outreach.db-journal
+
+# Uploaded Attachments
+backend/attachments/
+attachments/
+
+# Python Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating System files
+.DS_Store
+Thumbs.db
