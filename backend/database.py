@@ -205,6 +205,49 @@ Best,
 {{SenderName}}
 {{SenderPhone}}""",
             "day_offset": 3
+        },
+        "f2": {
+            "subject": "Re: Collaboration Proposal - {{Company}}",
+            "body": """Hi {{FirstName}},
+
+I wanted to quickly follow up in case my previous mail got buried. I know you receive a lot of messages, so I'll keep this short.
+
+If you have 10 minutes sometime next week, I'd love to connect and share more about how we can collaborate.
+
+Best,
+{{SenderName}}
+{{SenderPhone}}""",
+            "day_offset": 6
+        },
+        "f3": {
+            "subject": "Re: Collaboration - {{Company}}",
+            "body": """Hi {{FirstName}},
+
+Just bumping this one last time in case it slipped through.
+
+We'd love to explore how we can support {{Company}}'s initiatives or collaborate with your team this quarter.
+
+Let me know if you are open to a brief call.
+
+Best,
+{{SenderName}}
+{{SenderPhone}}""",
+            "day_offset": 9
+        },
+        "f4": {
+            "subject": "Re: closing this thread",
+            "body": """Hi {{FirstName}},
+
+I know you have a busy schedule, so I will close the loop on this thread for now.
+
+If a collaboration or opportunity isn't a priority for {{Company}} at this time, no worries at all!
+
+Feel free to drop a line if things open up in the future.
+
+Best,
+{{SenderName}}
+{{SenderPhone}}""",
+            "day_offset": 12
         }
     }
 }
@@ -297,6 +340,18 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )""")
 
+    conn.commit()
+
+    # Seed default templates for all registered users if they are missing
+    users = cursor.execute("SELECT id FROM users").fetchall()
+    for u in users:
+        u_id = u["id"]
+        for campaign_id, steps in DEFAULT_TEMPLATES.items():
+            for step_key, data in steps.items():
+                cursor.execute("""
+                    INSERT OR IGNORE INTO templates (user_id, campaign_id, step_key, subject, body, day_offset)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (u_id, campaign_id, step_key, data["subject"], data["body"], data["day_offset"]))
     conn.commit()
     conn.close()
 

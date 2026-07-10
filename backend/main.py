@@ -354,10 +354,13 @@ def schedule_bulk_leads(payload: BulkLeadUpload, user = Depends(get_current_user
             "f2": "f2"
         }
     else:
-        generic_steps = ["initial", "f1"]
+        generic_steps = ["initial", "f1", "f2", "f3", "f4"]
         template_keys = {
             "initial": "initial",
-            "f1": "f1"
+            "f1": "f1",
+            "f2": "f2",
+            "f3": "f3",
+            "f4": "f4"
         }
 
     # Fetch templates offsets for these steps

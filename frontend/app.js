@@ -289,7 +289,7 @@ function getCampaignColumns(campaignId) {
             { key: "company", label: "Target Entity", placeholder: "Google India" },
             { key: "custom_field_1", label: "Custom Variable 1", placeholder: "Resume.pdf" },
             { key: "custom_field_2", label: "Custom Variable 2", placeholder: "GTE Role" },
-            { key: "start_from", label: "Start From Stage", placeholder: "initial", options: ["initial", "f1"] }
+            { key: "start_from", label: "Start From Stage", placeholder: "initial", options: ["initial", "f1", "f2", "f3", "f4"] }
         ];
     }
 }
@@ -577,6 +577,9 @@ async function loadTemplatesTab() {
     } else { // all_purpose
         addOption(stepSelect, "initial", "Initial Step");
         addOption(stepSelect, "f1", "Follow-up 1 (f1)");
+        addOption(stepSelect, "f2", "Follow-up 2 (f2)");
+        addOption(stepSelect, "f3", "Follow-up 3 (f3)");
+        addOption(stepSelect, "f4", "Follow-up 4 (f4)");
     }
 
     await fetchAllTemplates();
