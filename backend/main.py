@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
 
 from backend.database import get_db, init_db, create_user, create_session, get_user_from_session, destroy_session
-from backend.email_worker import get_user_sending_state, start_sending_thread, send_email_smtp
+from backend.email_worker import get_user_sending_state, start_sending_thread, send_email_smtp, get_campaign_attachment
 
 app = FastAPI(title="E-Cell Outreach OS API")
 
