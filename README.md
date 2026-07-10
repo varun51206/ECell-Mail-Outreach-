@@ -30,14 +30,26 @@ Follow these simple steps to download and run the application on your computer:
 4. Extract the downloaded folder to a location on your computer (e.g., your Desktop or Documents folder).
 
 ### Step 2: Launch the App
+
+#### For Windows Users:
 1. Open the extracted folder.
 2. Double-click the file named **`run.bat`** (Windows Batch File).
-3. *That's it!* A black terminal window will open and automatically:
-   - Create a local Python environment.
-   - Install the required libraries.
-   - Configure the SQLite database.
-   - Open your web browser to **`http://127.0.0.1:8000`** where the app is running.
-4. Keep the black terminal window open while using the website. You can close it when you are finished sending your emails.
+3. *That's it!* A black terminal window will open and automatically start the app and open your browser.
+
+#### For macOS / Linux Users:
+1. Open the **Terminal** app.
+2. Navigate to the extracted folder (e.g., `cd ~/Downloads/ECell-Mail-Outreach-master`).
+3. Make the runner executable by running:
+   ```bash
+   chmod +x run.sh
+   ```
+4. Run the script:
+   ```bash
+   ./run.sh
+   ```
+
+*Note: Keep the terminal window open while using the website. You can close it when you are finished sending your emails.*
+
 
 ---
 
