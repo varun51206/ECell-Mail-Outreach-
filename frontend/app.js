@@ -608,25 +608,20 @@ async function loadTemplatesTab() {
         addOption(stepSelect, "f4", "Follow-up 4 (f4)");
     }
 
-    if (!quill) {
-        quill = new Quill('#template-body-container', {
-            theme: 'snow',
-            placeholder: 'Write your email body here...',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link', 'clean']
-                ]
-            }
-        });
-        quill.on('text-change', () => {
-            updateTemplatePreview();
-        });
-    }
-
     await fetchAllTemplates();
     loadTemplateView();
+}
+
+function formatDoc(cmd) {
+    if (cmd === 'createLink') {
+        const url = prompt("Enter URL (e.g. https://calendly.com/your-link):");
+        if (url) {
+            document.execCommand(cmd, false, url);
+        }
+    } else {
+        document.execCommand(cmd, false, null);
+    }
+    updateTemplatePreview();
 }
 
 function addOption(select, value, label) {
@@ -655,15 +650,17 @@ function loadTemplateView() {
     
     const subjectInput = document.getElementById("template-subject");
     const offsetInput = document.getElementById("template-offset");
+    const editor = document.getElementById("template-body-editor");
 
     const cData = templatesData[campaignId] || {};
     const sData = cData[stepKey] || { subject: "", body: "", day_offset: 0 };
 
     subjectInput.value = sData.subject;
     offsetInput.value = sData.day_offset;
-
-    if (quill) {
-        quill.root.innerHTML = sData.body || "";
+    
+    if (editor) {
+        editor.innerHTML = sData.body || "";
+        editor.oninput = updateTemplatePreview;
     }
 
     subjectInput.oninput = updateTemplatePreview;
@@ -672,7 +669,8 @@ function loadTemplateView() {
 
 function updateTemplatePreview() {
     const subjVal = document.getElementById("template-subject").value;
-    const bodyVal = quill ? quill.root.innerHTML : "";
+    const editor = document.getElementById("template-body-editor");
+    const bodyVal = editor ? editor.innerHTML : "";
     
     const sample = {
         FirstName: "Rohan",
@@ -701,7 +699,8 @@ async function saveTemplate() {
     const campaignId = document.getElementById("template-campaign-select").value;
     const stepKey = document.getElementById("template-step-select").value;
     const subject = document.getElementById("template-subject").value;
-    const body = quill ? quill.root.innerHTML : "";
+    const editor = document.getElementById("template-body-editor");
+    const body = editor ? editor.innerHTML : "";
     const offset = parseInt(document.getElementById("template-offset").value) || 0;
 
     const payload = {
@@ -1093,7 +1092,8 @@ async function sendTestEmail() {
     const campaignId = document.getElementById("template-campaign-select").value;
     const stepKey = document.getElementById("template-step-select").value;
     const subject = document.getElementById("template-subject").value;
-    const body = document.getElementById("template-body").value;
+    const editor = document.getElementById("template-body-editor");
+    const body = editor ? editor.innerHTML : "";
     const btn = document.getElementById("send-test-btn");
 
     if (!subject.trim() || !body.trim()) {
