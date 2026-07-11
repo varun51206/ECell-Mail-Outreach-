@@ -4,8 +4,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
-DB_DIR = "/data" if os.path.exists("/data") else os.path.dirname(__file__)
-DB_PATH = os.path.join(DB_DIR, "ecell_outreach.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "ecell_outreach.db")
 
 DEFAULT_TEMPLATES = {
     "live_project": {
