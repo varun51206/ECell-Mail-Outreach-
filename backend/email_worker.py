@@ -1,5 +1,6 @@
 import time
 import imaplib
+import socket
 import re
 import os
 import sqlite3
@@ -11,6 +12,15 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from backend.database import get_db, DB_PATH
+
+def get_smtp_ipv4_host() -> str:
+    try:
+        addr_info = socket.getaddrinfo("smtp.gmail.com", 587, socket.AF_INET, socket.SOCK_STREAM)
+        if addr_info:
+            return addr_info[0][4][0]
+    except Exception:
+        pass
+    return "smtp.gmail.com"
 
 def inject_tracking(body_html: str, public_url: str, schedule_id: int) -> str:
     public_url_clean = public_url.rstrip("/")
@@ -93,7 +103,8 @@ def send_email_smtp(gmail_user, gmail_app_password, to_email, subject, body, fro
             part.add_header("Content-Disposition", f'attachment; filename="{name}"')
             msg.attach(part)
 
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=180) as server:
+        smtp_host = get_smtp_ipv4_host()
+        with smtplib.SMTP(smtp_host, 587, timeout=180) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -278,9 +289,9 @@ def process_due_emails(user_id: int):
             
             print(f"[Worker] User {user_id} | Campaign {campaign_id} | Sent to {to_email} | Result: {msg}")
 
-            # 5-6 second cooldown (5.5s) throttle delay
+            # Reduced cooldown (1.5s) throttle delay
             if sent_count < total_count:
-                time.sleep(5.5)
+                time.sleep(1.5)
 
         else:
             # Loop finished normally without break
