@@ -80,6 +80,8 @@ def send_email_smtp(gmail_user, gmail_app_password, to_email, subject, body, fro
         msg["Subject"] = subject
         is_html = body.strip().startswith("<") or "</div>" in body or "</p>" in body or "<br" in body
         mime_type = "html" if is_html else "plain"
+        if mime_type == "html":
+            body = body.replace("\n", "<br>")
         msg.attach(MIMEText(body, mime_type, "utf-8"))
 
         if attachment_path and os.path.exists(attachment_path):

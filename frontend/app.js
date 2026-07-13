@@ -659,7 +659,12 @@ function loadTemplateView() {
     offsetInput.value = sData.day_offset;
     
     if (editor) {
-        editor.innerHTML = sData.body || "";
+        let bodyHtml = sData.body || "";
+        const isHtml = bodyHtml.trim().startsWith("<") || bodyHtml.includes("</div>") || bodyHtml.includes("</p>") || bodyHtml.includes("<br");
+        if (!isHtml) {
+            bodyHtml = bodyHtml.replace(/\n/g, "<br>");
+        }
+        editor.innerHTML = bodyHtml;
         editor.oninput = updateTemplatePreview;
     }
 
