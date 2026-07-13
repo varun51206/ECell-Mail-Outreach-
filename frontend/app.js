@@ -459,7 +459,7 @@ async function bulkSaveLeads() {
         leads: validLeads,
         start_date: startDate,
         offsets: {}, // Server will fallback to default offsets stored in user templates
-        replace_mode: true // Replaces current queue for this campaign
+        replace_mode: false // Appends to the current queue (use red 'Delete All Database Schedules' button to overwrite)
     };
 
     try {
